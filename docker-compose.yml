@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: connectsafe-api
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - MONGO_URI=mongodb+srv://inbox:uhbt9Eyqs6TSnQbN@cluster-1.uktwwmh.mongodb.net/dataing_backend
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKER=redpanda:29092  # Connect to internal broker port
+      - JWT_SECRET=helloq
+    depends_on:
+      - redis
+      - redpanda
+      - mongo
+    networks:
+      - app-network
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.4
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092
+    ports:
+      - "19092:29092"  # external access (optional)
+    networks:
+      - app-network
+
+volumes:
+  mongo-data:
+
+networks:
+  app-network:
+    driver: bridge

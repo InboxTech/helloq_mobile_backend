@@ -1,0 +1,82 @@
+// services/auth.service.js
+const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+const { sendSMS } = require('../utils/sms');
+const { normalizePhone } = require('../utils/phone');
+
+/**
+ * Generate a 6-digit OTP
+ */
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+/**
+ * Send OTP via SMS and store in Redis
+ */
+const sendOTP = async (phone) => {
+  // Normalize phone: remove non-digits, prepend +1 if not international
+  const normalizedPhone = phone.replace(/\D/g, '');
+  const fullPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+
+  const otp = generateOTP();
+
+  // Store in Redis: expire in 10 minutes (600 seconds)
+  await global.redis.setex(`otp:${fullPhone}`, 600, otp);
+
+  // Send SMS
+  try {
+    await sendSMS(fullPhone, `Your HelloQ verification code is ${otp}. Valid for 10 minutes.`);
+    console.log(`OTP sent to ${fullPhone}: ${otp}`);
+  } catch (error) {
+    console.error('SMS send failed:', error.message);
+    throw new Error('Failed to send OTP. Please try again.');
+  }
+};
+
+/**
+ * Verify OTP and return JWT
+ */
+const verifyOTP = async (phone, code) => {
+  // Normalize phone same way as in sendOTP
+  const normalizedPhone = phone.replace(/\D/g, '');
+  const fullPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+
+  // Retrieve OTP from Redis
+  const storedOTP = await global.redis.get(`otp:${fullPhone}`);
+
+  if (!storedOTP) {
+    throw new Error('No OTP found. Please request a new one.');
+  }
+
+  if (storedOTP !== code) {
+    throw new Error('Invalid or expired OTP.');
+  }
+
+  // OTP is valid → delete it (one-time use)
+  await global.redis.del(`otp:${fullPhone}`);
+
+  // Find or create user
+  let user = await User.findOne({ phone: fullPhone });
+  if (!user) {
+    user = await User.create({
+      phone: fullPhone,
+      // verified: true, // Mark as verified since OTP passed
+      // Add defaults if needed: name, avatar, etc.
+    });
+    console.log(`New user created: ${fullPhone}`);
+  } else if (!user.verified) {
+    // user.verified = true;
+    await user.save();
+    console.log(`User verified: ${fullPhone}`);
+  }
+
+  // Generate JWT
+  const token = jwt.sign(
+    { userId: user._id, phone: user.phone },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  return token;
+};
+
+module.exports = { sendOTP, verifyOTP };
