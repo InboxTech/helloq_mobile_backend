@@ -1,3 +1,4 @@
+const User = require('../models/user.model');
 const { sendOTP, verifyOTP } = require('../services/auth.service');
 
 const sendOtp = async (req, res) => {
@@ -12,10 +13,20 @@ const sendOtp = async (req, res) => {
 const verifyOtp = async (req, res) => {
   try {
     const token = await verifyOTP(req.body.phone, req.body.code);
-    res.json({ token });
+
+    // Return success + token
+    res.json({
+      success: true,
+      token, // JWT token
+    });
   } catch (err) {
-    res.status(401).json({ error: err.message });
+    res.status(401).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
+
+
 
 module.exports = { sendOtp, verifyOtp };
