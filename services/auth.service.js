@@ -47,7 +47,13 @@ const verifyOTP = async (phone, code) => {
     throw new Error('No OTP found. Please request a new one.');
   }
 
-  if (storedOTP !== code) {
+  const submittedOTP = String(code ?? '').trim();
+
+  if (!submittedOTP) {
+    throw new Error('OTP code is required.');
+  }
+
+  if (storedOTP !== submittedOTP) {
     throw new Error('Invalid or expired OTP.');
   }
 
