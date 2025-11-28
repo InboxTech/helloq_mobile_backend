@@ -91,31 +91,31 @@ connectDB();
 })();
 
 // === KAFKA (optional, safe fallback) ===
-(async () => {
-  try {
-    global.kafka = new Kafka({
-      clientId: 'helloq-backend',
-      brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
-    });
+// (async () => {
+//   try {
+//     global.kafka = new Kafka({
+//       clientId: 'helloq-backend',
+//       brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
+//     });
 
-    global.producer = kafka.producer();
-    await producer.connect();
-    console.log('✅ Kafka producer connected');
+//     global.producer = kafka.producer();
+//     await producer.connect();
+//     console.log('✅ Kafka producer connected');
 
-    // Try to start consumers, ignore errors
-    try {
-      startKafkaConsumers();
-    } catch {
-      console.warn('⚠️ Kafka consumers skipped');
-    }
+//     // Try to start consumers, ignore errors
+//     try {
+//       startKafkaConsumers();
+//     } catch {
+//       console.warn('⚠️ Kafka consumers skipped');
+//     }
 
-  } catch (err) {
-    console.warn('⚠️ Kafka not running – continuing without it');
-    global.producer = {
-      send: async () => console.log('Mock Kafka send() called'),
-    };
-  }
-})();
+//   } catch (err) {
+//     console.warn('⚠️ Kafka not running – continuing without it');
+//     global.producer = {
+//       send: async () => console.log('Mock Kafka send() called'),
+//     };
+//   }
+// })();
 
 // === SOCKET.IO ===
 setupSocket(io);
