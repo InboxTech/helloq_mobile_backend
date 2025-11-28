@@ -54,6 +54,7 @@ const getProfile = async (req, res) => {
 };
 
 // PUT → /api/auth/me
+// PUT → /api/users/update
 const updateProfile = async (req, res) => {
   try {
     const updates = req.body;
@@ -76,5 +77,6 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { createUser, getProfile, updateProfile };
