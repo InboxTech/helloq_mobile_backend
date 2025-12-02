@@ -84,29 +84,21 @@ const updateProfile = async (req, res) => {
   }
 };
 
-const uploadPhotos = async (req, res) => {
-  try {
-    const files = req.files.map((f) => ({
-      url: `${process.env.SERVER_URL}/uploads/${f.filename}`,
-      verified: false,
-      isPrimary: false,
-    }));
+const uploadPhotosController = async (req, res) => {
+   try {
+    if (!req.photoUrls || req.photoUrls.length === 0) {
+      return res.status(400).json({ error: "No photos uploaded" });
+    }
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { photos: files },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      photos: user.photos,
+    await User.findByIdAndUpdate(req.user._id, {
+      $push: { photos: { $each: req.photoUrls } }
     });
-  } catch (error) {
-    console.log("Upload Photos Error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+
+    res.json({ photos: req.photoUrls });
+  } catch (err) {
+    console.log("Error saving photos:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
-
-module.exports = { createUser, getProfile, updateProfile,uploadPhotos };
+module.exports = { createUser, getProfile, updateProfile,uploadPhotosController };

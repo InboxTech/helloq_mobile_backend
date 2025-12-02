@@ -58,12 +58,12 @@ app.get('/health', (req, res) => {
 });
 
 // === PROTECTED UPLOAD ROUTE ===
-app.post('/upload', protect, uploadPhoto, handleUpload, (req, res) => {
-  if (!req.file?.url) {
-    return res.status(400).json({ error: 'Upload failed' });
-  }
-  res.json({ url: req.file.url });
-});
+// app.post('/upload', protect, uploadPhoto, handleUpload, (req, res) => {
+//   if (!req.file?.url) {
+//     return res.status(400).json({ error: 'Upload failed' });
+//   }
+//   res.json({ url: req.file.url });
+// });
 
 // === ERROR HANDLER (MUST BE LAST) ===
 app.use(errorHandler);
