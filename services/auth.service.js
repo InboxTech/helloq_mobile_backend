@@ -36,53 +36,31 @@ const sendOTP = async (phone) => {
  * Verify OTP and return JWT
  */
 const verifyOTP = async (phone, code) => {
-  // Normalize phone same way as in sendOTP
   const normalizedPhone = phone.replace(/\D/g, '');
   const fullPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
 
   // Retrieve OTP from Redis
   const storedOTP = await global.redis.get(`otp:${fullPhone}`);
+  if (!storedOTP) throw new Error('Invalid or expired OTP');
 
-  if (!storedOTP) {
-    throw new Error('No OTP found. Please request a new one.');
-  }
+  if (storedOTP !== String(code).trim()) throw new Error('Invalid or expired OTP');
 
-  const submittedOTP = String(code ?? '').trim();
-
-  if (!submittedOTP) {
-    throw new Error('OTP code is required.');
-  }
-
-  if (storedOTP !== submittedOTP) {
-    throw new Error('Invalid or expired OTP.');
-  }
-
-  // OTP is valid → delete it (one-time use)
+  // OTP is valid → delete it
   await global.redis.del(`otp:${fullPhone}`);
 
-  // Find or create user
+  // Optional: create placeholder user if not exists
   let user = await User.findOne({ phone: fullPhone });
   if (!user) {
-    user = await User.create({
-      phone: fullPhone,
-      // verified: true, // Mark as verified since OTP passed
-      // Add defaults if needed: name, avatar, etc.
-    });
-    console.log(`New user created: ${fullPhone}`);
-  } else if (!user.verified) {
-    // user.verified = true;
-    await user.save();
-    console.log(`User verified: ${fullPhone}`);
+    user = await User.create({ phone: fullPhone, isPhoneVerified: true });
   }
 
   // Generate JWT
-  const token = jwt.sign(
-    { userId: user._id, phone: user.phone },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  const token = jwt.sign({ userId: user._id, phone: fullPhone }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
   return token;
 };
+
+
+
 
 module.exports = { sendOTP, verifyOTP };

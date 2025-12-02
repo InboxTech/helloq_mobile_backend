@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { protect } = require('../middleware/auth.middleware');
 const {uploadPhotos, handleMultiUpload} = require("../middleware/upload.middleware");
-const { createUser, getProfile, updateProfile, uploadPhotosController } = require('../controllers/user.controller');
+const { createUser, getProfile, updateProfile, uploadPhotosController,updatePrivacySettings } = require('../controllers/user.controller');
 const upload = require("../middleware/upload");
 const router = Router();
 
@@ -15,6 +15,6 @@ router.post(
   handleMultiUpload,
   uploadPhotosController
 );
-
+router.put("/privacy", protect, updatePrivacySettings);
 
 module.exports = router;    
