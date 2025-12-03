@@ -67,7 +67,7 @@ const updateProfile = async (req, res) => {
     delete updates.isPremium;
     delete updates.verified;
 
-    // Convert array strings → actual arrays
+    // Convert arrays safely
     ["pronouns", "identities", "interests", "intentions"].forEach((key) => {
       if (typeof updates[key] === "string") {
         try {
@@ -78,16 +78,11 @@ const updateProfile = async (req, res) => {
       }
     });
 
-    // Handle uploaded photos
-    if (req.files && req.files.length > 0) {
-      updates.photos = req.files.map((file, index) => ({
-        url: `/uploads/users/${file.filename}`,
-        verified: false,
-        isPrimary: index === 0, // first image becomes main photo
-      }));
-    }
+    // ⚠️ IGNORE frontend-only fields
+    delete updates.minAge;
+    delete updates.maxAge;
+    delete updates.distance;
 
-    // Update user
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { $set: updates },
@@ -96,17 +91,17 @@ const updateProfile = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Profile updated successfully",
+      message: "Preferences saved",
       user,
     });
-  } catch (error) {
-    console.log("Update error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+
+  } catch (err) {
+    console.log("Update error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
 
 const uploadPhotosController = async (req, res) => {
    try {
@@ -125,4 +120,39 @@ const uploadPhotosController = async (req, res) => {
   }
 };
 
-module.exports = { createUser, getProfile, updateProfile,uploadPhotosController };
+// update pricacy >>>
+
+const updatePrivacySettings = async (req, res) => {
+  try {
+    const { privacy } = req.body;
+
+    if (!privacy) {
+      return res.status(400).json({
+        success: false,
+        message: "Privacy settings missing",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { privacy } },
+      { new: true }
+    ).select("-__v");
+
+    return res.json({
+      success: true,
+      message: "Privacy settings updated successfully",
+      user: updatedUser,
+    });
+
+  } catch (err) {
+    console.log("Privacy update error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+
+module.exports = { createUser, getProfile, updateProfile,uploadPhotosController,updatePrivacySettings };
