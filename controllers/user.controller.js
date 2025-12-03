@@ -59,13 +59,13 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     // const updates = req.body;
+    let updates = req.body;
  // IMPORTANT: Prevent dangerous fields from being updated
     delete updates._id;
     delete updates.email;
     delete updates.phone;
     delete updates.isPremium;
     delete updates.verified;
-    let updates = req.body;
 
     // Convert array strings → actual arrays
     ["pronouns", "identities", "interests", "intentions"].forEach((key) => {
