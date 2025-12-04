@@ -51,6 +51,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use("/uploads", express.static("uploads"));
 
 // Health check
 app.get('/health', (req, res) => {

@@ -104,7 +104,7 @@ const updateProfile = async (req, res) => {
 
 
 const uploadPhotosController = async (req, res) => {
-   try {
+  try {
     if (!req.photoUrls || req.photoUrls.length === 0) {
       return res.status(400).json({ error: "No photos uploaded" });
     }
@@ -113,12 +113,17 @@ const uploadPhotosController = async (req, res) => {
       $push: { photos: { $each: req.photoUrls } }
     });
 
-    res.json({ photos: req.photoUrls });
+    res.json({
+      success: true,
+      message: "Photos uploaded successfully",
+      photos: req.photoUrls,
+    });
   } catch (err) {
     console.log("Error saving photos:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 // update pricacy >>>
 
