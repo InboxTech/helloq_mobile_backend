@@ -1,30 +1,51 @@
-const multer = require('multer');
-const { uploadToS3 } = require('../utils/s3');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
-// Memory storage for S3
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Ensure upload folder exists
+const uploadDir = path.join(__dirname, "..", "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
-// MULTIPLE PHOTOS middleware
+// Multer storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + ext);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 const uploadPhotos = upload.array("photos", 6);
 
-// MULTIPLE UPLOAD handler for S3
-const handleMultiUpload = async (req, res, next) => {
+// Convert file paths → usable URLs
+const handleMultiUpload = (req, res, next) => {
   try {
-    if (!req.files || req.files.length === 0) return next();
-
-    const uploaded = [];
-
-    for (const file of req.files) {
-      const result = await uploadToS3(file);
-      uploaded.push(result.Location);
+    if (!req.files || req.files.length === 0) {
+      req.photoUrls = [];
+      return next();
     }
 
-    req.photoUrls = uploaded; // pass to controller
+    // Convert each file → store proper format
+    req.photoUrls = req.files.map((file) => ({
+      url: `/uploads/${file.filename}`,
+      verified: false,
+      isPrimary: false,
+    }));
+
     next();
-  } catch (err) {
-    console.log("S3 Upload Error:", err);
-    res.status(500).json({ error: "Upload failed" });
+  } catch (error) {
+    console.log("Upload middleware error:", error);
+    return res.status(500).json({ error: "Upload processing failed" });
   }
 };
 
