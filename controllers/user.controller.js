@@ -109,20 +109,53 @@ const uploadPhotosController = async (req, res) => {
       return res.status(400).json({ error: "No photos uploaded" });
     }
 
-    await User.findByIdAndUpdate(req.user._id, {
-      $push: { photos: { $each: req.photoUrls } }
-    });
+    const isSelfie = req.body.isSelfie == "true";
 
-    res.json({
+    // Prepare uploaded photos with default: verified:false
+    const uploadedUrls = req.photoUrls.map((url) => ({
+      url,
+      verified: false
+    }));
+
+    // 1️⃣ Always add photos to user.photos (works for ALL screens)
+    const pushResult = await User.findByIdAndUpdate(
+      req.user._id,
+      { $push: { photos: { $each: uploadedUrls } } },
+      { new: true }
+    );
+
+    // 2️⃣ Only run verification logic when isSelfie === true
+    if (isSelfie) {
+      const selfieUrl = req.photoUrls[0]; // first selfie
+
+      // Mark the selfie photo as verified
+      await User.findByIdAndUpdate(
+        req.user._id,
+        {
+          $set: {
+            verified: true, // User verified
+            "photos.$[elem].verified": true // Mark only the selfie photo
+          }
+        },
+        {
+          arrayFilters: [{ "elem.url": selfieUrl }]
+        }
+      );
+    }
+
+    return res.json({
       success: true,
       message: "Photos uploaded successfully",
-      photos: req.photoUrls,
+      photos: uploadedUrls,
+      isSelfie,
     });
+
   } catch (err) {
     console.log("Error saving photos:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
+
 
 
 // update pricacy >>>
